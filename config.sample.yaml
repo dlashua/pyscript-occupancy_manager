@@ -1,0 +1,43 @@
+pyscript:
+  apps:    
+    occupancy_manager:
+      - state_entity: input_boolean.living_occupied
+        occupied_conditions:
+          - binary_sensor.home != 'off'
+        armed_conditions:
+          - binary_sensor.living_motion_counter == "on"
+          - binary_sensor.living_motion_tv == "on"
+          - binary_sensor.living_motion_over == "on"
+        occupied_states:
+          - binary_sensor.living_motion_counter == "on"
+          - binary_sensor.living_motion_tv == "on"
+          - binary_sensor.living_motion_over == "on"
+          - media_player.living_tv == "playing"
+        state_triggers:
+          - light.living_overhead == 'on' and light.living_overhead.old == 'off'
+          - light.living_tv_strip == 'on' and light.living_tv_strip.old == 'off'
+        timeout: 600
+
+# OR
+
+pyscript:
+  apps:    
+    occupancy_manager: {}
+  apps_list:
+    - app: occupancy_manager
+      state_entity: input_boolean.living_occupied
+      occupied_conditions:
+        - binary_sensor.home != 'off'
+      armed_conditions:
+        - binary_sensor.living_motion_counter == "on"
+        - binary_sensor.living_motion_tv == "on"
+        - binary_sensor.living_motion_over == "on"
+      occupied_states:
+        - binary_sensor.living_motion_counter == "on"
+        - binary_sensor.living_motion_tv == "on"
+        - binary_sensor.living_motion_over == "on"
+        - media_player.living_tv == "playing"
+      state_triggers:
+        - light.living_overhead == 'on' and light.living_overhead.old == 'off'
+        - light.living_tv_strip == 'on' and light.living_tv_strip.old == 'off'
+      timeout: 600
