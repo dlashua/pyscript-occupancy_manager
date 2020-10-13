@@ -4,7 +4,7 @@
 
 `occupancy_manager` uses a variety of input sensors (motion sensors, door sensors, device power sensors, etc) as well as event triggers (a light turning on, a door opening, etc) to determine if a room is occupied.
 
-This combines many complicated automations into one simple configuration
+This combines many complicated automations into one simple configuration.
 
 ## Using it!
 
