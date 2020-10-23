@@ -17,9 +17,11 @@ class OccupancyManager:
 
         self.delay_off_end = 0
 
+        self.ready = False
+
         @time_trigger('startup')
         def startup_trigger():
-            self.log_info('startup trigger')
+            self.log_debug('startup trigger')
             self.clear_delayed_off()
             self.startup()
 
@@ -40,6 +42,9 @@ class OccupancyManager:
     def log_error(self, message):
         log.error(f'{self.log_id()}: {message}')
 
+    def log_warning(self, message):
+        log.warning(f'{self.log_id()}: {message}')
+
     def log_debug(self, message):
         if DEBUG_AS_INFO:
             log.info(f'{self.log_id()} DEBUG: {message}')
@@ -52,7 +57,7 @@ class OccupancyManager:
 
 
         @state_trigger('True or {}'.format(self.state_entity))
-        def state_entity_change():
+        def state_entity_change(**data):
             new_state = state.get(self.state_entity)
 
             if new_state == self.state:
@@ -68,6 +73,10 @@ class OccupancyManager:
             @state_trigger('True or {}'.format(" or ".join(self.occupied_conditions)))
             def inner_occupied_condition(**params):
                 self.log_info(f'condition change with {params}')
+                if params['value'] == params['old_value']:
+                    self.log_info('no change. doing nothing.')
+                    return
+
                 self.update()
 
             registered_triggers.append(inner_occupied_condition)        
@@ -77,6 +86,10 @@ class OccupancyManager:
             @state_trigger('True or {}'.format(" or ".join(self.armed_conditions)))
             def inner_armed_condition(**params):
                 self.log_info(f'armed change with {params}')
+                if params['value'] == params['old_value']:
+                    self.log_info('no change. doing nothing.')
+                    return
+
                 self.update()
 
             registered_triggers.append(inner_armed_condition)  
@@ -86,6 +99,10 @@ class OccupancyManager:
             @state_trigger('True or {}'.format(" or ".join(self.occupied_states)))
             def inner_occupied_state(**params):
                 self.log_info(f'state change with {params}')
+                if params['value'] == params['old_value']:
+                    self.log_info('no change. doing nothing.')
+                    return
+
                 self.update()
 
             registered_triggers.append(inner_occupied_state)
@@ -95,6 +112,10 @@ class OccupancyManager:
             @state_trigger('True or {}'.format(" or ".join(self.held_states)))
             def inner_held_state(**params):
                 self.log_info(f'held change with {params}')
+                if params['value'] == params['old_value']:
+                    self.log_info('no change. doing nothing.')
+                    return
+
                 self.update()
 
             registered_triggers.append(inner_held_state)
@@ -107,6 +128,10 @@ class OccupancyManager:
             @state_trigger(one_state_trigger)
             def inner_state_trigger(**params):
                 self.log_info(f'state trigger with {params}')
+                if params['value'] == params['old_value']:
+                    self.log_info('no change. doing nothing.')
+                    return
+                    
                 self.trigger()
 
             registered_triggers.append(inner_state_trigger)
@@ -131,7 +156,7 @@ class OccupancyManager:
         @time_trigger('startup')
         def first_update():
             self.log_debug('first update')
-            self.update()
+            self.update(make_ready=True)
 
         registered_triggers.append(first_update)
 
@@ -183,8 +208,10 @@ class OccupancyManager:
 
         return True
 
-    def get_unique_id(self):
-        return f'occupancy_manager_{self.state_entity}'
+    def get_unique_id(self, task=''):
+        if task != '':
+            task = f"_{task}"
+        return f'occupancy_manager_{self.state_entity}{task}'
 
     def trigger(self):
         self.log_info('TRIGGERED')
@@ -211,8 +238,15 @@ class OccupancyManager:
         # If they aren't "on", this will lead to a "pending_off" state
         self.update()
 
-    def update(self):
-        self.log_info('updating')
+    def update(self, make_ready=False):
+        if make_ready:
+            self.ready = True
+
+        if not self.ready:
+            log_warning('Not Ready')
+            return
+
+        self.log_debug('updating')
         if not self.check_conditions():
             self.log_info('conditions not met')
             self.turn_off(immediate=True)
@@ -305,14 +339,14 @@ class OccupancyManager:
         return True  
 
     def turn_on(self):
+        self.clear_delayed_off()
+
         if self.state == 'on':
             self.log_info('still on')
             return
 
-        self.clear_delayed_off()
-
         if self.state == 'pending_off':
-            self.log_info('remaining on')
+            self.log_info('clearing delayed off. remaining on.')
             self.state = 'on'
         else:
             self.log_info('on')
